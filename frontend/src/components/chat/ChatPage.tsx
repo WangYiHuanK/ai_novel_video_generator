@@ -12,19 +12,19 @@ function SystemPromptPanel({ value, onChange }: { value: string; onChange: (v: s
   const [open, setOpen] = useState(false)
 
   return (
-    <div className="border-b border-gray-800">
+    <div className="border-b border-gray-200">
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-800/50 transition-colors"
+        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors"
       >
         <Settings2 size={14} />
         <span>系统提示词</span>
-        {value && <span className="ml-auto text-xs text-brand-400 truncate max-w-48">{value.slice(0, 40)}...</span>}
+        {value && <span className="ml-auto text-xs text-brand-600 truncate max-w-48">{value.slice(0, 40)}...</span>}
         {open ? <ChevronUp size={14} className="ml-auto" /> : <ChevronDown size={14} className="ml-auto" />}
       </button>
       {open && (
-        <div className="px-4 pb-3 space-y-2">
-          <div className="flex gap-2 flex-wrap">
+        <div className="px-4 pb-3 space-y-2 bg-gray-50">
+          <div className="flex gap-2 flex-wrap pt-2">
             {SYSTEM_PROMPTS.map(p => (
               <button
                 key={p.id}
@@ -33,13 +33,13 @@ function SystemPromptPanel({ value, onChange }: { value: string; onChange: (v: s
                   'text-xs px-2 py-1 rounded border transition-colors',
                   value === p.prompt
                     ? 'bg-brand-600 border-brand-600 text-white'
-                    : 'border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-200'
+                    : 'border-gray-300 text-gray-500 hover:border-gray-400 hover:text-gray-700'
                 )}
               >
                 {p.label}
               </button>
             ))}
-            <button onClick={() => onChange('')} className="text-xs px-2 py-1 rounded border border-gray-700 text-gray-400 hover:text-gray-200">
+            <button onClick={() => onChange('')} className="text-xs px-2 py-1 rounded border border-gray-300 text-gray-500 hover:text-gray-700">
               清空
             </button>
           </div>
@@ -62,18 +62,18 @@ function MessageBubble({ role, content, isStreaming }: { role: string; content: 
     <div className={clsx('flex gap-3', isUser && 'flex-row-reverse')}>
       <div className={clsx(
         'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-1',
-        isUser ? 'bg-brand-600 text-white' : 'bg-gray-700 text-gray-300'
+        isUser ? 'bg-brand-600 text-white' : 'bg-gray-200 text-gray-600'
       )}>
         {isUser ? '我' : 'AI'}
       </div>
       <div className={clsx(
         'max-w-[75%] rounded-xl px-4 py-3 text-sm leading-relaxed',
-        isUser ? 'bg-brand-600 text-white rounded-tr-sm' : 'bg-gray-800 text-gray-100 rounded-tl-sm'
+        isUser ? 'bg-brand-600 text-white rounded-tr-sm' : 'bg-white border border-gray-200 text-gray-800 rounded-tl-sm shadow-sm'
       )}>
         {isUser ? (
           <p className="whitespace-pre-wrap">{content}</p>
         ) : (
-          <div className="prose prose-invert prose-sm max-w-none">
+          <div className="prose prose-sm max-w-none prose-gray">
             <ReactMarkdown>{content}</ReactMarkdown>
             {isStreaming && <span className="inline-block w-1 h-4 bg-gray-400 animate-pulse ml-0.5" />}
           </div>
@@ -130,13 +130,13 @@ export function ChatPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
-        <h2 className="font-medium text-white">AI 对话创作</h2>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white">
+        <h2 className="font-medium text-gray-900">AI 对话创作</h2>
         <div className="flex gap-1">
           <button onClick={() => chatApi.exportDialogue(projectId!)} className="btn-ghost text-xs">
             <Download size={14} /> 导出
           </button>
-          <button onClick={handleClear} className="btn-ghost text-xs text-red-400 hover:text-red-300">
+          <button onClick={handleClear} className="btn-ghost text-xs text-red-500 hover:text-red-600">
             <Trash2 size={14} /> 清空
           </button>
         </div>
@@ -146,9 +146,9 @@ export function ChatPage() {
       <SystemPromptPanel value={systemPrompt} onChange={setSystemPrompt} />
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
         {messages.length === 0 && !streaming && (
-          <div className="text-center py-16 text-gray-500">
+          <div className="text-center py-16 text-gray-400">
             <p className="text-sm">开始对话，让 AI 帮你创作故事</p>
             <p className="text-xs mt-1">选择上方的系统提示词预设，快速进入创作模式</p>
           </div>
@@ -163,7 +163,7 @@ export function ChatPage() {
       </div>
 
       {/* Input */}
-      <div className="border-t border-gray-800 p-4">
+      <div className="border-t border-gray-200 p-4 bg-white">
         <div className="flex gap-2 items-end">
           <textarea
             ref={textareaRef}

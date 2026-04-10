@@ -66,10 +66,10 @@ export function ModelFormModal({ editing, onClose, onSaved }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div className="card w-full max-w-lg p-6">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="font-semibold text-white">{editing ? '编辑模型' : '添加模型'}</h2>
+          <h2 className="font-semibold text-gray-900">{editing ? '编辑模型' : '添加模型'}</h2>
           <button onClick={onClose} className="btn-ghost p-1"><X size={16} /></button>
         </div>
 
@@ -130,17 +130,17 @@ export function ModelFormModal({ editing, onClose, onSaved }: Props) {
           </div>
 
           <div className="flex gap-4">
-            <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
               <input type="checkbox" checked={form.is_default} onChange={e => setForm(f => ({ ...f, is_default: e.target.checked }))} />
               设为默认模型
             </label>
-            <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
               <input type="checkbox" checked={form.is_enabled} onChange={e => setForm(f => ({ ...f, is_enabled: e.target.checked }))} />
               启用
             </label>
           </div>
 
-          {error && <p className="text-red-400 text-sm">{error}</p>}
+          {error && <p className="text-red-500 text-sm">{error}</p>}
 
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="btn-ghost">取消</button>

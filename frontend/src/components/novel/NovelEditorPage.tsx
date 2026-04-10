@@ -38,9 +38,9 @@ function ChapterNav({ projectId }: { projectId: string }) {
   }
 
   return (
-    <div className="w-52 shrink-0 border-r border-gray-800 flex flex-col">
-      <div className="flex items-center justify-between px-3 py-3 border-b border-gray-800">
-        <span className="text-sm font-medium text-gray-300">章节</span>
+    <div className="w-52 shrink-0 border-r border-gray-200 flex flex-col bg-white">
+      <div className="flex items-center justify-between px-3 py-3 border-b border-gray-200">
+        <span className="text-sm font-medium text-gray-700">章节</span>
         <button onClick={addChapter} className="btn-ghost p-1" title="新增章节">
           <Plus size={14} />
         </button>
@@ -52,25 +52,25 @@ function ChapterNav({ projectId }: { projectId: string }) {
             className={clsx(
               'flex items-center gap-1 px-3 py-2 cursor-pointer group transition-colors',
               activeChapter?.id === ch.id
-                ? 'bg-brand-600/20 text-white border-l-2 border-brand-500'
-                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                ? 'bg-brand-50 text-brand-700 border-l-2 border-brand-500'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
             )}
             onClick={() => loadChapter(ch.id)}
           >
             <div className="flex-1 min-w-0">
               <p className="text-sm truncate">{ch.title}</p>
-              <p className="text-xs text-gray-500">{ch.word_count.toLocaleString()} 字</p>
+              <p className="text-xs text-gray-400">{ch.word_count.toLocaleString()} 字</p>
             </div>
             <button
               onClick={(e) => { e.stopPropagation(); deleteChapter(ch.id) }}
-              className="opacity-0 group-hover:opacity-100 p-0.5 text-red-400 hover:text-red-300 transition-opacity"
+              className="opacity-0 group-hover:opacity-100 p-0.5 text-red-400 hover:text-red-500 transition-opacity"
             >
               <Trash2 size={12} />
             </button>
           </div>
         ))}
         {chapters.length === 0 && (
-          <p className="text-xs text-gray-500 px-3 py-4">点击 + 新建章节</p>
+          <p className="text-xs text-gray-400 px-3 py-4">点击 + 新建章节</p>
         )}
       </div>
     </div>
@@ -97,22 +97,22 @@ function ChapterEditor({ projectId, chapter }: { projectId: string; chapter: Cha
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex items-center gap-3 px-6 py-3 border-b border-gray-800">
+      <div className="flex items-center gap-3 px-6 py-3 border-b border-gray-200 bg-white">
         <input
-          className="flex-1 bg-transparent text-lg font-semibold text-white focus:outline-none placeholder-gray-600"
+          className="flex-1 bg-transparent text-lg font-semibold text-gray-900 focus:outline-none placeholder-gray-300"
           value={title}
           onChange={e => setTitle(e.target.value)}
           onBlur={() => novelApi.saveChapter(projectId, chapter.id, title, content)}
           placeholder="章节标题"
         />
-        <div className="text-xs text-gray-500 shrink-0">
+        <div className="text-xs text-gray-400 shrink-0">
           {content.length.toLocaleString()} 字符
         </div>
         {saveStatus === 'saving' && <Loader2 size={13} className="text-gray-400 animate-spin" />}
-        {saveStatus === 'saved' && <Check size={13} className="text-green-400" />}
+        {saveStatus === 'saved' && <Check size={13} className="text-green-500" />}
       </div>
       <textarea
-        className="flex-1 bg-transparent text-sm text-gray-200 p-6 resize-none focus:outline-none leading-relaxed placeholder-gray-600"
+        className="flex-1 bg-white text-sm text-gray-800 p-6 resize-none focus:outline-none leading-relaxed placeholder-gray-300"
         value={content}
         onChange={e => { setContent(e.target.value); updateActiveContent(e.target.value) }}
         placeholder="开始写作..."
@@ -142,7 +142,7 @@ export function NovelEditorPage() {
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Export toolbar */}
-        <div className="flex items-center justify-end px-4 py-2 border-b border-gray-800 gap-1">
+        <div className="flex items-center justify-end px-4 py-2 border-b border-gray-200 bg-white gap-1">
           <button onClick={() => novelApi.exportNovel(projectId!, 'md')} className="btn-ghost text-xs">
             <Download size={13} /> 导出 .md
           </button>
@@ -154,7 +154,7 @@ export function NovelEditorPage() {
         {activeChapter ? (
           <ChapterEditor projectId={projectId!} chapter={activeChapter} />
         ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-500">
+          <div className="flex-1 flex items-center justify-center text-gray-400 bg-gray-50">
             <div className="text-center">
               <p className="text-sm">没有章节</p>
               <p className="text-xs mt-1">在左侧点击 + 创建第一章</p>

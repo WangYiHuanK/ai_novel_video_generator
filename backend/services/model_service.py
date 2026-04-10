@@ -162,23 +162,27 @@ def set_default_model(model_id: str) -> bool:
 
 async def test_model_connection(model_id: str) -> ModelTestResult:
     import time
-    from openai import AsyncOpenAI
+    import aiohttp
 
     raw = get_model_raw(model_id)
     if raw is None:
         return ModelTestResult(success=False, error="Model not found")
     try:
         api_key = decrypt(raw["api_key"])
-        client = AsyncOpenAI(
-            api_key=api_key,
-            base_url=raw.get("base_url") or None,
-        )
+        base_url = (raw.get("base_url") or "https://api.openai.com/v1").rstrip("/")
+        url = f"{base_url}/chat/completions"
+        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+        payload = {
+            "model": raw["model_name"],
+            "messages": [{"role": "user", "content": "hi"}],
+            "max_tokens": 1,
+        }
         start = time.monotonic()
-        await client.chat.completions.create(
-            model=raw["model_name"],
-            messages=[{"role": "user", "content": "hi"}],
-            max_tokens=1,
-        )
+        async with aiohttp.ClientSession() as http:
+            async with http.post(url, headers=headers, json=payload) as resp:
+                if resp.status not in (200, 201):
+                    body = await resp.text()
+                    raise RuntimeError(f"HTTP {resp.status}: {body}")
         latency = int((time.monotonic() - start) * 1000)
         return ModelTestResult(success=True, latency_ms=latency)
     except Exception as e:

@@ -37,20 +37,20 @@ export function ModelConfigPage() {
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-white">模型配置</h1>
-          <p className="text-sm text-gray-400 mt-0.5">管理 AI 模型的 API 连接</p>
+          <h1 className="text-xl font-semibold text-gray-900">模型配置</h1>
+          <p className="text-sm text-gray-500 mt-0.5">管理 AI 模型的 API 连接</p>
         </div>
         <button onClick={openCreate} className="btn-primary">
           <Plus size={16} /> 添加模型
         </button>
       </div>
 
-      {loading && <p className="text-gray-400 text-sm">加载中...</p>}
+      {loading && <p className="text-gray-500 text-sm">加载中...</p>}
 
       {!loading && models.length === 0 && (
         <div className="card p-12 text-center">
-          <p className="text-gray-400">暂无模型配置</p>
-          <p className="text-gray-500 text-sm mt-1">点击「添加模型」开始配置</p>
+          <p className="text-gray-500">暂无模型配置</p>
+          <p className="text-gray-400 text-sm mt-1">点击「添加模型」开始配置</p>
         </div>
       )}
 
@@ -61,21 +61,21 @@ export function ModelConfigPage() {
             <div key={m.id} className="card p-4 flex items-center gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-white">{m.name}</span>
+                  <span className="font-medium text-gray-900">{m.name}</span>
                   {m.is_default && (
                     <span className="text-xs bg-brand-600 text-white px-1.5 py-0.5 rounded">默认</span>
                   )}
                   {!m.is_enabled && (
-                    <span className="text-xs bg-gray-700 text-gray-400 px-1.5 py-0.5 rounded">已禁用</span>
+                    <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">已禁用</span>
                   )}
                 </div>
-                <p className="text-sm text-gray-400 mt-0.5">
+                <p className="text-sm text-gray-500 mt-0.5">
                   {PROVIDER_LABELS[m.provider]} · {m.model_name}
-                  {m.base_url && <span className="ml-2 text-gray-500">{m.base_url}</span>}
+                  {m.base_url && <span className="ml-2 text-gray-400">{m.base_url}</span>}
                 </p>
-                <p className="text-xs text-gray-500 mt-0.5">Key: {m.api_key_masked}</p>
+                <p className="text-xs text-gray-400 mt-0.5">Key: {m.api_key_masked}</p>
                 {tr && (
-                  <p className={clsx('text-xs mt-1', tr.success ? 'text-green-400' : 'text-red-400')}>
+                  <p className={clsx('text-xs mt-1', tr.success ? 'text-green-600' : 'text-red-500')}>
                     {tr.success ? `✓ 连接成功 ${tr.latency}ms` : `✗ ${tr.error}`}
                   </p>
                 )}
@@ -101,7 +101,7 @@ export function ModelConfigPage() {
                 </button>
                 <button
                   onClick={() => remove(m.id)}
-                  className="btn-ghost text-red-400 hover:text-red-300"
+                  className="btn-ghost text-red-500 hover:text-red-600"
                   title="删除"
                 >
                   <Trash2 size={14} />

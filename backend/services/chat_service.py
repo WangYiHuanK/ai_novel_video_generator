@@ -1,8 +1,9 @@
+import json
 import uuid
 from datetime import datetime
 from typing import AsyncGenerator
 
-from openai import AsyncOpenAI
+import aiohttp
 from sqlmodel import Session, select
 
 from db.tables import ConversationMessage
@@ -11,6 +12,7 @@ from services.model_service import get_default_model_raw, get_model_raw
 from utils.encryption import decrypt
 
 HISTORY_LIMIT = 20
+_DEFAULT_BASE_URL = "https://api.openai.com/v1"
 
 
 def _get_history(session: Session, project_id: str) -> list[ConversationMessage]:
@@ -75,28 +77,46 @@ async def stream_chat(
     for h in history:
         messages.append({"role": h.role, "content": h.content})
 
-    # Stream from AI
+    # Stream from AI via aiohttp
     try:
         api_key = decrypt(raw["api_key"])
-        client = AsyncOpenAI(
-            api_key=api_key,
-            base_url=raw.get("base_url") or None,
-        )
-        response = await client.chat.completions.create(
-            model=raw["model_name"],
-            messages=messages,  # type: ignore[arg-type]
-            temperature=request.temperature if request.temperature is not None else raw.get("temperature", 0.7),
-            max_tokens=request.max_tokens if request.max_tokens is not None else raw.get("max_tokens", 4096),
-            stream=True,
-        )
+        base_url = (raw.get("base_url") or _DEFAULT_BASE_URL).rstrip("/")
+        url = f"{base_url}/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": raw["model_name"],
+            "messages": messages,
+            "temperature": request.temperature if request.temperature is not None else raw.get("temperature", 0.7),
+            "max_tokens": request.max_tokens if request.max_tokens is not None else raw.get("max_tokens", 4096),
+            "stream": True,
+        }
 
         full_text = ""
-        async for chunk in response:
-            delta = chunk.choices[0].delta.content if chunk.choices else None
-            if delta:
-                full_text += delta
-                event = StreamEvent(event="delta", data=delta)
-                yield f"data: {event.model_dump_json()}\n\n"
+        async with aiohttp.ClientSession() as http:
+            async with http.post(url, headers=headers, json=payload) as resp:
+                if resp.status != 200:
+                    body = await resp.text()
+                    raise RuntimeError(f"HTTP {resp.status}: {body}")
+
+                async for raw_line in resp.content:
+                    line = raw_line.decode("utf-8").strip()
+                    if not line or not line.startswith("data: "):
+                        continue
+                    data = line[6:]
+                    if data == "[DONE]":
+                        break
+                    try:
+                        chunk = json.loads(data)
+                        delta = (chunk["choices"][0]["delta"].get("content")) or ""
+                        if delta:
+                            full_text += delta
+                            event = StreamEvent(event="delta", data=delta)
+                            yield f"data: {event.model_dump_json()}\n\n"
+                    except (json.JSONDecodeError, KeyError, IndexError):
+                        continue
 
         # Save assistant message
         saved = _save_message(session, project_id, "assistant", full_text)

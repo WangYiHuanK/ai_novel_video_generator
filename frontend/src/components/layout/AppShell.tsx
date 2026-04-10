@@ -13,11 +13,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { current } = useProjectStore()
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-950">
+    <div className="flex h-screen overflow-hidden bg-gray-50">
       {/* Sidebar */}
-      <nav className="w-14 flex flex-col items-center py-4 gap-2 bg-gray-900 border-r border-gray-800">
+      <nav className="w-14 flex flex-col items-center py-4 gap-2 bg-white border-r border-gray-200">
         <Link to="/projects" className="mb-4">
-          <Film size={24} className="text-brand-500" />
+          <Film size={24} className="text-brand-600" />
         </Link>
 
         {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
@@ -29,7 +29,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               'p-2.5 rounded-lg transition-colors',
               location.pathname.startsWith(to)
                 ? 'bg-brand-600 text-white'
-                : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100'
             )}
           >
             <Icon size={20} />
@@ -38,7 +38,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {current && (
           <>
-            <div className="w-8 border-t border-gray-700 my-1" />
+            <div className="w-8 border-t border-gray-200 my-1" />
             <Link
               to={`/projects/${current.id}/chat`}
               title="对话"
@@ -46,7 +46,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 'p-2.5 rounded-lg transition-colors',
                 location.pathname.includes('/chat')
                   ? 'bg-brand-600 text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                  : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100'
               )}
             >
               <MessageSquare size={20} />
@@ -58,7 +58,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 'p-2.5 rounded-lg transition-colors',
                 location.pathname.includes('/novel')
                   ? 'bg-brand-600 text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                  : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100'
               )}
             >
               <BookOpen size={20} />
