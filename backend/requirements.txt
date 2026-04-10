@@ -1,0 +1,12 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+sqlmodel==0.0.21
+aiosqlite==0.20.0
+openai==1.51.0
+cryptography==43.0.3
+python-multipart==0.0.12
+pydantic-settings==2.5.2
+python-dotenv==1.0.1
+
+# Packaging (Windows installer build only)
+pyinstaller==6.11.1
