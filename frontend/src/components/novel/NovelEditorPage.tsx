@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { Plus, Trash2, Download, Check, Loader2 } from 'lucide-react'
 import { novelApi } from '../../api/novelApi'
 import { useNovelStore } from '../../store/useNovelStore'
@@ -123,16 +123,20 @@ function ChapterEditor({ projectId, chapter }: { projectId: string; chapter: Cha
 
 export function NovelEditorPage() {
   const { projectId } = useParams<{ projectId: string }>()
+  const [searchParams] = useSearchParams()
   const { chapters, activeChapter, setChapters, setActiveChapter } = useNovelStore()
 
   useEffect(() => {
     if (!projectId) return
     novelApi.listChapters(projectId).then(async (chs) => {
       setChapters(chs)
-      if (chs.length > 0) {
-        const full = await novelApi.getChapter(projectId, chs[0].id)
-        setActiveChapter(full)
-      }
+      if (chs.length === 0) return
+      // Pre-select chapter from URL param, or fall back to first
+      const targetId = searchParams.get('chapter')
+      const target = targetId ? chs.find(c => c.id === targetId) : chs[0]
+      const chapterToLoad = target ?? chs[0]
+      const full = await novelApi.getChapter(projectId, chapterToLoad.id)
+      setActiveChapter(full)
     })
   }, [projectId])
 

@@ -12,7 +12,8 @@ export const SYSTEM_PROMPTS: SystemPromptPreset[] = [
 - 整体故事框架（起承转合）
 - 主要情节节点
 - 核心冲突与解决方案
-- 章节分配建议
+- 章节分配建议（请用"第X章 章节标题"的格式列出每章标题）
+
 请以结构化的方式输出，便于后续创作。`,
   },
   {
@@ -51,3 +52,9 @@ export const SYSTEM_PROMPTS: SystemPromptPreset[] = [
     prompt: `你是一位富有创意的写作助手，擅长各类文学创作。请根据用户的需求，提供专业、有创意的写作协助。`,
   },
 ]
+
+// Default supplement texts for user customization
+export const DEFAULT_WORLDBUILDING = SYSTEM_PROMPTS.find(p => p.id === 'worldbuilding')!.prompt
+export const DEFAULT_CHARACTER = SYSTEM_PROMPTS.find(p => p.id === 'character')!.prompt
+export const OUTLINE_BASE = SYSTEM_PROMPTS.find(p => p.id === 'outline')!.prompt
+export const CHAPTER_BASE = SYSTEM_PROMPTS.find(p => p.id === 'chapter')!.prompt
