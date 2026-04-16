@@ -4,6 +4,7 @@ export interface ChapterRead {
   order: number
   word_count: number
   updated_at: string
+  summary?: string  // Chapter summary from outline
 }
 
 export interface ChapterContent extends ChapterRead {
@@ -14,6 +15,7 @@ export interface ChapterCreate {
   title: string
   order: number
   content?: string
+  summary?: string
 }
 
 export type ExportFormat = 'md' | 'txt'

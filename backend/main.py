@@ -7,7 +7,7 @@ from pathlib import Path
 from config import DATA_DIR, PROJECTS_BASE_DIR, settings
 from db.database import create_db_and_tables
 from utils.encryption import ensure_encryption_key
-from routers import models, projects, chat, novel
+from routers import models, projects, chat, novel, ai_generate
 
 app = FastAPI(title=settings.app_name, debug=settings.debug)
 
@@ -23,6 +23,7 @@ app.include_router(models.router, prefix="/api")
 app.include_router(projects.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 app.include_router(novel.router, prefix="/api")
+app.include_router(ai_generate.router, prefix="/api")
 
 # Serve built frontend in production
 if getattr(sys, "frozen", False):

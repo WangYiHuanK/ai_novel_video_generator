@@ -1,5 +1,6 @@
 import client from './client'
 import type { ChapterContent, ChapterCreate, ChapterRead, ExportFormat } from '../types/novel'
+import { projectsApi } from './projectsApi'
 
 export const novelApi = {
   listChapters: (projectId: string) =>
@@ -12,8 +13,16 @@ export const novelApi = {
     client.put<ChapterContent>(`/novel/${projectId}/chapters/${chapterId}`, { title, content }).then(r => r.data),
   deleteChapter: (projectId: string, chapterId: string) =>
     client.delete(`/novel/${projectId}/chapters/${chapterId}`),
-  exportNovel: (projectId: string, format: ExportFormat = 'md') => {
-    window.open(`/api/novel/${projectId}/export?format=${format}`, '_blank')
+  exportNovel: async (projectId: string, format: ExportFormat = 'md') => {
+    const project = await projectsApi.get(projectId)
+    const filename = `${project.name}.${format}`
+    const res = await client.get(`/novel/${projectId}/export?format=${format}`, { responseType: 'blob' })
+    const url = URL.createObjectURL(res.data)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
   },
   getOutline: (projectId: string) =>
     client.get<{ content: string }>(`/novel/${projectId}/outline`).then(r => r.data.content),

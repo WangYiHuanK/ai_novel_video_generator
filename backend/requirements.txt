@@ -8,5 +8,10 @@ python-multipart==0.0.12
 pydantic-settings==2.5.2
 python-dotenv==1.0.1
 
+# LangChain for AI orchestration
+langchain==0.3.0
+langchain-core==0.3.0
+langchain-community==0.3.0
+
 # Packaging (Windows installer build only)
 pyinstaller==6.11.1

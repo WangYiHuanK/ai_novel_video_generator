@@ -2,11 +2,12 @@ import { useEffect, useRef, useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Send, Square, Trash2, Download, ChevronDown, ChevronUp,
-  BookOpen, Plus, Save, FileText, Zap, Settings2, RefreshCw,
+  BookOpen, Plus, Save, FileText, Zap, Settings2, RefreshCw, Sparkles,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { chatApi } from '../../api/chatApi'
 import { novelApi } from '../../api/novelApi'
+import { aiGenerateApi } from '../../api/aiGenerateApi'
 import { useChatStore } from '../../store/useChatStore'
 import { useSSEStream } from '../../hooks/useSSEStream'
 import { OUTLINE_BASE, CHAPTER_BASE, DEFAULT_WORLDBUILDING, DEFAULT_CHARACTER } from '../../constants/systemPrompts'
@@ -15,16 +16,31 @@ import { clsx } from 'clsx'
 
 type PromptMode = 'outline' | 'chapter'
 
-// Parse chapter titles from AI-generated outline
-function parseChapterTitles(text: string): string[] {
-  const titles: string[] = []
-  for (const line of text.split('\n')) {
-    const t = line.trim().replace(/^\*\*/, '').replace(/\*\*$/, '').replace(/^#{1,3}\s+/, '')
-    if (/^第[一二三四五六七八九十百\d]+章/.test(t) || /^Chapter\s+\d+/i.test(t)) {
-      titles.push(t)
+// Parse chapter titles and summaries from AI-generated outline
+function parseChaptersFromOutline(text: string): Array<{ title: string; summary: string }> {
+  const chapters: Array<{ title: string; summary: string }> = []
+  const lines = text.split('\n')
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim()
+    const cleaned = line.replace(/^\*\*/, '').replace(/\*\*$/, '').replace(/^#{1,3}\s+/, '')
+
+    // Match chapter title
+    if (/^第[一二三四五六七八九十百\d]+章/.test(cleaned) || /^Chapter\s+\d+/i.test(cleaned)) {
+      let summary = ''
+      // Look ahead for summary (next 1-3 non-empty lines that don't start with chapter marker)
+      for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
+        const nextLine = lines[j].trim()
+        if (!nextLine) continue
+        const nextCleaned = nextLine.replace(/^\*\*/, '').replace(/\*\*$/, '').replace(/^#{1,3}\s+/, '').replace(/^[>\-\*]\s*/, '')
+        if (/^第[一二三四五六七八九十百\d]+章/.test(nextCleaned) || /^Chapter\s+\d+/i.test(nextCleaned)) break
+        summary = nextCleaned
+        break
+      }
+      chapters.push({ title: cleaned, summary })
     }
   }
-  return titles
+  return chapters
 }
 
 // ──────────────────────── Left panel ────────────────────────
@@ -44,7 +60,7 @@ function LeftPanel({
   const navigate = useNavigate()
   const [outlineOpen, setOutlineOpen] = useState(true)
   const [generating, setGenerating] = useState(false)
-  const parsedTitles = useMemo(() => parseChapterTitles(outline), [outline])
+  const parsedChapters = useMemo(() => parseChaptersFromOutline(outline), [outline])
 
   async function addChapter() {
     const order = chapters.length + 1
@@ -53,14 +69,18 @@ function LeftPanel({
   }
 
   async function handleGenerateChapters() {
-    if (parsedTitles.length === 0) return
-    if (!window.confirm(`从大纲生成 ${parsedTitles.length} 个章节？\n\n${parsedTitles.slice(0, 6).join('\n')}${parsedTitles.length > 6 ? '\n...' : ''}`)) return
+    if (parsedChapters.length === 0) return
+    if (!window.confirm(`从大纲生成 ${parsedChapters.length} 个章节？\n\n${parsedChapters.slice(0, 6).map(c => c.title).join('\n')}${parsedChapters.length > 6 ? '\n...' : ''}`)) return
     setGenerating(true)
     try {
       const start = chapters.length + 1
       const created: ChapterRead[] = []
-      for (let i = 0; i < parsedTitles.length; i++) {
-        const ch = await novelApi.createChapter(projectId, { title: parsedTitles[i], order: start + i })
+      for (let i = 0; i < parsedChapters.length; i++) {
+        const ch = await novelApi.createChapter(projectId, {
+          title: parsedChapters[i].title,
+          order: start + i,
+          summary: parsedChapters[i].summary,
+        })
         created.push(ch)
       }
       onChaptersChange([...chapters, ...created])
@@ -99,14 +119,14 @@ function LeftPanel({
             ) : (
               <p className="text-xs text-gray-400 py-2">在对话中生成大纲后，点击「保存大纲」</p>
             )}
-            {outline && parsedTitles.length > 0 && chapters.length === 0 && (
+            {outline && parsedChapters.length > 0 && chapters.length === 0 && (
               <button
                 onClick={handleGenerateChapters}
                 disabled={generating}
                 className="mt-2 w-full text-xs btn bg-brand-50 text-brand-700 hover:bg-brand-100 border border-brand-200 justify-center"
               >
                 <Zap size={12} />
-                {generating ? '生成中...' : `生成 ${parsedTitles.length} 个章节`}
+                {generating ? '生成中...' : `生成 ${parsedChapters.length} 个章节`}
               </button>
             )}
           </div>
@@ -135,9 +155,11 @@ function LeftPanel({
             key={ch.id}
             onClick={() => navigate(`/projects/${projectId}/novel?chapter=${ch.id}`)}
             className="w-full flex flex-col px-3 py-2 text-left hover:bg-gray-50 border-b border-gray-100 transition-colors group"
+            title={ch.summary || undefined}
           >
             <span className="text-xs text-gray-700 truncate group-hover:text-brand-600">{ch.title}</span>
-            <span className="text-xs text-gray-400">{ch.word_count.toLocaleString()} 字</span>
+            {ch.summary && <span className="text-xs text-gray-400 line-clamp-2 mt-0.5">{ch.summary}</span>}
+            <span className="text-xs text-gray-400 mt-0.5">{ch.word_count.toLocaleString()} 字</span>
           </button>
         ))}
       </div>
@@ -161,12 +183,15 @@ function SystemPromptPanel({
   mode, onModeChange,
   worldEnabled, onWorldToggle, worldText, onWorldText,
   charEnabled, onCharToggle, charText, onCharText,
+  chapters, selectedChapterId, onChapterSelect,
 }: {
   mode: PromptMode; onModeChange: (m: PromptMode) => void
   worldEnabled: boolean; onWorldToggle: () => void; worldText: string; onWorldText: (v: string) => void
   charEnabled: boolean; onCharToggle: () => void; charText: string; onCharText: (v: string) => void
+  chapters: ChapterRead[]; selectedChapterId: string | null; onChapterSelect: (id: string | null) => void
 }) {
   const [open, setOpen] = useState(false)
+  const selectedChapter = chapters.find(c => c.id === selectedChapterId)
 
   return (
     <div className="border-b border-gray-200">
@@ -182,6 +207,9 @@ function SystemPromptPanel({
         )}>
           {mode === 'outline' ? '大纲模式' : '章节模式'}
         </span>
+        {mode === 'chapter' && selectedChapter && (
+          <span className="text-xs text-blue-600 truncate max-w-32">{selectedChapter.title}</span>
+        )}
         {(worldEnabled || charEnabled) && (
           <span className="text-xs text-brand-600">+{[worldEnabled, charEnabled].filter(Boolean).length} 个补充</span>
         )}
@@ -208,6 +236,28 @@ function SystemPromptPanel({
               </button>
             </div>
           </div>
+
+          {/* Chapter selector — only in chapter mode */}
+          {mode === 'chapter' && chapters.length > 0 && (
+            <div>
+              <p className="text-xs text-gray-500 mb-1.5">选择章节（可选）</p>
+              <select
+                className="w-full text-xs bg-white border border-gray-300 rounded px-2 py-1.5 text-gray-700 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                value={selectedChapterId || ''}
+                onChange={e => onChapterSelect(e.target.value || null)}
+              >
+                <option value="">不指定章节</option>
+                {chapters.map(ch => (
+                  <option key={ch.id} value={ch.id}>{ch.title}</option>
+                ))}
+              </select>
+              {selectedChapter?.summary && (
+                <p className="text-xs text-gray-500 mt-1.5 bg-blue-50 border border-blue-200 rounded p-2 leading-relaxed">
+                  <span className="font-medium text-blue-700">章节概述：</span>{selectedChapter.summary}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Worldbuilding supplement */}
           <div>
@@ -303,19 +353,28 @@ export function ChatPage() {
   const [worldText, setWorldText] = useState(DEFAULT_WORLDBUILDING)
   const [charEnabled, setCharEnabled] = useState(false)
   const [charText, setCharText] = useState(DEFAULT_CHARACTER)
+  const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null)
 
   // Left panel state
   const [outline, setOutline] = useState('')
   const [chapters, setChapters] = useState<ChapterRead[]>([])
 
+  const selectedChapter = chapters.find(c => c.id === selectedChapterId)
+
   // Combined system prompt
   const systemPrompt = useMemo(() => {
     const base = promptMode === 'outline' ? OUTLINE_BASE : CHAPTER_BASE
     const parts = [base]
+
+    // Add chapter summary if in chapter mode and chapter is selected
+    if (promptMode === 'chapter' && selectedChapter?.summary) {
+      parts.push(`当前章节：${selectedChapter.title}\n章节概述：${selectedChapter.summary}`)
+    }
+
     if (worldEnabled && worldText.trim()) parts.push(`世界观设定参考：\n${worldText}`)
     if (promptMode === 'chapter' && charEnabled && charText.trim()) parts.push(`人物设定参考：\n${charText}`)
     return parts.join('\n\n---\n\n')
-  }, [promptMode, worldEnabled, worldText, charEnabled, charText])
+  }, [promptMode, worldEnabled, worldText, charEnabled, charText, selectedChapter])
 
   useEffect(() => {
     if (!projectId) return
@@ -357,8 +416,89 @@ export function ChatPage() {
     if (!projectId) return
     const lastAI = [...messages].reverse().find(m => m.role === 'assistant')
     if (!lastAI) return
+
+    // Save outline
     await novelApi.saveOutline(projectId, lastAI.content)
     setOutline(lastAI.content)
+
+    // Auto-generate chapters from parsed outline
+    const parsedChapters = parseChaptersFromOutline(lastAI.content)
+    if (parsedChapters.length > 0 && chapters.length === 0) {
+      const created: ChapterRead[] = []
+      for (let i = 0; i < parsedChapters.length; i++) {
+        const ch = await novelApi.createChapter(projectId, {
+          title: parsedChapters[i].title,
+          order: i + 1,
+          summary: parsedChapters[i].summary,
+        })
+        created.push(ch)
+      }
+      setChapters(created)
+    }
+  }
+
+  // AI generate outline
+  const [aiGenerating, setAiGenerating] = useState(false)
+  const [aiStatus, setAiStatus] = useState<string>('')
+
+  async function handleAIGenerateOutline() {
+    if (!projectId) return
+
+    const userRequest = input.trim() || '创作一个精彩的小说大纲，包含完整的故事背景、人物设定和章节规划'
+    setInput('')
+    setAiGenerating(true)
+    setAiStatus('正在发送请求到 AI 模型...')
+
+    try {
+      // Add user message
+      addMessage({
+        id: Date.now().toString(),
+        role: 'user',
+        content: userRequest,
+        created_at: new Date().toISOString()
+      })
+
+      const result = await aiGenerateApi.generateOutline(projectId, {
+        user_request: userRequest,
+      })
+
+      if (result.success && result.content) {
+        setAiStatus('大纲生成成功！')
+
+        // Add AI message
+        addMessage({
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: result.content,
+          created_at: new Date().toISOString()
+        })
+
+        // Auto save outline
+        setOutline(result.content)
+
+        // Auto-generate chapters
+        const parsedChapters = parseChaptersFromOutline(result.content)
+        if (parsedChapters.length > 0 && chapters.length === 0) {
+          const created: ChapterRead[] = []
+          for (let i = 0; i < parsedChapters.length; i++) {
+            const ch = await novelApi.createChapter(projectId, {
+              title: parsedChapters[i].title,
+              order: i + 1,
+              summary: parsedChapters[i].summary,
+            })
+            created.push(ch)
+          }
+          setChapters(created)
+        }
+
+        setTimeout(() => setAiStatus(''), 3000)
+      }
+    } catch (err) {
+      setAiStatus(err instanceof Error ? err.message : '生成失败')
+      setTimeout(() => setAiStatus(''), 5000)
+    } finally {
+      setAiGenerating(false)
+    }
   }
 
   const lastAIMessage = [...messages].reverse().find(m => m.role === 'assistant')
@@ -412,6 +552,9 @@ export function ChatPage() {
           worldText={worldText} onWorldText={setWorldText}
           charEnabled={charEnabled} onCharToggle={() => setCharEnabled(v => !v)}
           charText={charText} onCharText={setCharText}
+          chapters={chapters}
+          selectedChapterId={selectedChapterId}
+          onChapterSelect={setSelectedChapterId}
         />
 
         {/* Messages */}
@@ -452,18 +595,51 @@ export function ChatPage() {
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={promptMode === 'outline' ? '描述你的故事创意，例如：写一个古风修仙故事，主角是一个落魄书生...' : '告诉 AI 要写哪一章，例如：写第一章，主角初入江湖...'}
-              disabled={isStreaming}
+              disabled={isStreaming || aiGenerating}
             />
+            {promptMode === 'outline' && !isStreaming && (
+              <button
+                onClick={handleAIGenerateOutline}
+                disabled={aiGenerating}
+                className={clsx(
+                  'shrink-0 flex items-center gap-1.5 px-3 py-2 text-sm rounded-md transition-colors',
+                  aiGenerating
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-purple-600 text-white hover:bg-purple-700'
+                )}
+                title="AI 智能生成大纲"
+              >
+                {aiGenerating ? (
+                  <>
+                    <RefreshCw size={16} className="animate-spin" />
+                    <span>生成中</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={16} />
+                    <span>AI 生成</span>
+                  </>
+                )}
+              </button>
+            )}
             {isStreaming ? (
               <button onClick={stop} className="btn-danger shrink-0">
                 <Square size={16} fill="currentColor" />
               </button>
             ) : (
-              <button onClick={handleSend} disabled={!input.trim()} className="btn-primary shrink-0">
+              <button onClick={handleSend} disabled={!input.trim() || aiGenerating} className="btn-primary shrink-0">
                 <Send size={16} />
               </button>
             )}
           </div>
+          {aiStatus && (
+            <div className={clsx(
+              'mt-2 text-xs px-3 py-1.5 rounded',
+              aiGenerating ? 'bg-blue-50 text-blue-600' : aiStatus.includes('成功') ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
+            )}>
+              {aiStatus}
+            </div>
+          )}
         </div>
       </div>
     </div>

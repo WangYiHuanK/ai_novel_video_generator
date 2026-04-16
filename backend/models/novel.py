@@ -6,6 +6,7 @@ from pydantic import BaseModel
 class ChapterBase(BaseModel):
     title: str
     order: int
+    summary: str | None = None
 
 
 class ChapterCreate(ChapterBase):
