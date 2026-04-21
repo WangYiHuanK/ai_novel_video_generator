@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import {
   Plus, Trash2, Download, Check, Loader2, Send, Square,
   MessageSquare, Edit3, ChevronUp, ChevronDown, Copy,
@@ -19,33 +19,20 @@ import { BatchGeneratePanel } from './BatchGeneratePanel'
 
 // ──────────────────────── Chapter Nav ────────────────────────
 function ChapterNav({ projectId }: { projectId: string }) {
-  const { chapters, activeChapter, setChapters, setActiveChapter } = useNovelStore()
-
-  async function loadChapter(id: string) {
-    const ch = await novelApi.getChapter(projectId, id)
-    setActiveChapter(ch)
-  }
+  const { chapters, setChapters } = useNovelStore()
+  const navigate = useNavigate()
 
   async function addChapter() {
     const order = chapters.length + 1
     const ch = await novelApi.createChapter(projectId, { title: `第 ${order} 章`, order })
     setChapters([...chapters, ch])
-    const full = await novelApi.getChapter(projectId, ch.id)
-    setActiveChapter(full)
+    navigate(`/projects/${projectId}/chapters/${ch.id}`)
   }
 
   async function deleteChapter(id: string) {
     await novelApi.deleteChapter(projectId, id)
     const updated = chapters.filter(c => c.id !== id)
     setChapters(updated)
-    if (activeChapter?.id === id) {
-      if (updated.length > 0) {
-        const full = await novelApi.getChapter(projectId, updated[0].id)
-        setActiveChapter(full)
-      } else {
-        setActiveChapter(null)
-      }
-    }
   }
 
   return (
@@ -60,13 +47,8 @@ function ChapterNav({ projectId }: { projectId: string }) {
         {chapters.map(ch => (
           <div
             key={ch.id}
-            className={clsx(
-              'flex items-center gap-1 px-3 py-2 cursor-pointer group transition-colors',
-              activeChapter?.id === ch.id
-                ? 'bg-brand-50 text-brand-700 border-l-2 border-brand-500'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-            )}
-            onClick={() => loadChapter(ch.id)}
+            className="flex items-center gap-1 px-3 py-2 cursor-pointer group transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            onClick={() => navigate(`/projects/${projectId}/chapters/${ch.id}`)}
           >
             <div className="flex-1 min-w-0">
               <p className="text-sm truncate">{ch.title}</p>
@@ -392,20 +374,12 @@ function ChapterEditor({ projectId, chapter }: { projectId: string; chapter: Cha
 // ──────────────────────── Main Page ────────────────────────
 export function NovelEditorPage() {
   const { projectId } = useParams<{ projectId: string }>()
-  const [searchParams] = useSearchParams()
-  const { chapters, activeChapter, setChapters, setActiveChapter } = useNovelStore()
+  const navigate = useNavigate()
+  const { chapters, setChapters } = useNovelStore()
 
   useEffect(() => {
     if (!projectId) return
-    novelApi.listChapters(projectId).then(async (chs) => {
-      setChapters(chs)
-      if (chs.length === 0) return
-      const targetId = searchParams.get('chapter')
-      const target = targetId ? chs.find(c => c.id === targetId) : chs[0]
-      const chapterToLoad = target ?? chs[0]
-      const full = await novelApi.getChapter(projectId, chapterToLoad.id)
-      setActiveChapter(full)
-    })
+    novelApi.listChapters(projectId).then(setChapters)
   }, [projectId])
 
   return (
@@ -433,16 +407,21 @@ export function NovelEditorPage() {
           }}
         />
 
-        {activeChapter ? (
-          <ChapterEditor projectId={projectId!} chapter={activeChapter} />
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-400 bg-gray-50">
-            <div className="text-center">
-              <p className="text-sm">没有章节</p>
-              <p className="text-xs mt-1">在左侧点击 + 创建第一章</p>
-            </div>
+        <div className="flex-1 flex items-center justify-center text-gray-400 bg-gray-50">
+          <div className="text-center">
+            {chapters.length === 0 ? (
+              <>
+                <p className="text-sm">没有章节</p>
+                <p className="text-xs mt-1">在左侧点击 + 创建第一章</p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm">点击左侧章节查看详情</p>
+                <p className="text-xs mt-1">可在详情页编辑内容并与 AI 对话</p>
+              </>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   )

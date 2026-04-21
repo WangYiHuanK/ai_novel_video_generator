@@ -47,6 +47,8 @@ def _to_read(raw: dict) -> ModelConfigRead:
         is_enabled=raw.get("is_enabled", True),
         max_tokens=raw.get("max_tokens", 4096),
         temperature=raw.get("temperature", 0.7),
+        enable_thinking=raw.get("enable_thinking", False),
+        thinking_budget=raw.get("thinking_budget"),
         api_key_masked=masked,
         created_at=datetime.fromisoformat(raw["created_at"]),
         updated_at=datetime.fromisoformat(raw["updated_at"]),
@@ -95,6 +97,8 @@ def create_model(data: ModelConfigCreate) -> ModelConfigRead:
         "is_enabled": data.is_enabled,
         "max_tokens": data.max_tokens,
         "temperature": data.temperature,
+        "enable_thinking": data.enable_thinking,
+        "thinking_budget": data.thinking_budget,
         "api_key": encrypt(data.api_key),
         "created_at": now,
         "updated_at": now,
@@ -122,6 +126,8 @@ def update_model(model_id: str, data: ModelConfigUpdate) -> ModelConfigRead | No
                     "is_enabled": data.is_enabled,
                     "max_tokens": data.max_tokens,
                     "temperature": data.temperature,
+                    "enable_thinking": data.enable_thinking,
+                    "thinking_budget": data.thinking_budget,
                     "updated_at": datetime.utcnow().isoformat(),
                 }
             )

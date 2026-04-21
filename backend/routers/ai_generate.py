@@ -2,11 +2,24 @@
 import json
 import re
 from fastapi import APIRouter, HTTPException
+
+_CHAPTER_END_RE = re.compile(
+    r"(?:第[一二三四五六七八九十百千\d]+章\s*完|\(完\)|（完）|【完】|The\s+End)",
+    re.IGNORECASE,
+)
+
+
+def _strip_chapter_end_marker(text: str) -> str:
+    """Remove chapter-end marker and everything after it."""
+    m = _CHAPTER_END_RE.search(text)
+    if m:
+        return text[:m.start()].rstrip()
+    return text.rstrip()
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional
 
-from services.langchain_service import ChapterGenerationChain, OutlineGenerationChain
+from services.langchain_service import ChapterGenerationChain, OutlineGenerationChain, parse_content_and_summary
 from services.novel_service import save_outline, create_chapter, save_chapter
 
 router = APIRouter(prefix="/ai-generate", tags=["ai-generate"])
@@ -73,13 +86,15 @@ async def generate_chapter(project_id: str, request: ChapterGenerateRequest):
             chapter_summary=request.chapter_summary,
             user_request=request.user_request
         )
+        chapter_content, summary = parse_content_and_summary(chapter_content)
+        chapter_content = _strip_chapter_end_marker(chapter_content)
 
         # Create the chapter
         from models.novel import ChapterCreate
         chapter_data = ChapterCreate(
             title=request.chapter_title,
             order=request.chapter_order,
-            summary=request.chapter_summary,
+            summary=summary or request.chapter_summary,
             content=chapter_content
         )
         created_chapter = create_chapter(project_id, chapter_data)
@@ -112,6 +127,7 @@ async def continue_chapter(project_id: str, request: ChapterContinueRequest):
             current_content=request.current_content,
             user_request=request.user_request
         )
+        continuation = _strip_chapter_end_marker(continuation)
 
         return {
             "success": True,
@@ -211,12 +227,14 @@ async def batch_generate_chapters(project_id: str, request: BatchGenerateRequest
 
             try:
                 # Generate initial content
-                content = await chain.generate(
+                raw = await chain.generate(
                     chapter_order=ch.order,
                     chapter_title=ch.title,
                     chapter_summary=ch.summary,
                     user_request="根据大纲和前文，创作这一章节，保持连贯性，内容丰富详细"
                 )
+                content, summary = parse_content_and_summary(raw)
+                content = _strip_chapter_end_marker(content)
 
                 # Count words
                 def count_words(text: str) -> int:
@@ -242,16 +260,21 @@ async def batch_generate_chapters(project_id: str, request: BatchGenerateRequest
                         "words": words,
                         "message": f"字数不足，续写中（{words}/{request.min_words}字）..."
                     })
-                    continuation = await chain.continue_chapter(
+                    content = _strip_chapter_end_marker(content)
+                    raw_continuation = await chain.continue_chapter(
                         chapter_order=ch.order,
                         current_content=content,
                         user_request=f"继续写下去，保持连贯，当前已有{words}字，需要达到{request.min_words}字"
                     )
+                    continuation, new_summary = parse_content_and_summary(raw_continuation)
+                    if new_summary:
+                        summary = new_summary
+                    continuation = _strip_chapter_end_marker(continuation)
                     content = content + "\n\n" + continuation
                     words = count_words(content)
 
-                # Save chapter
-                svc_save_chapter(project_id, ch.id, ch.title, content)
+                # Save chapter with auto-generated summary
+                svc_save_chapter(project_id, ch.id, ch.title, content, summary=summary or ch.summary)
 
                 yield send("chapter_done", {
                     "index": i,

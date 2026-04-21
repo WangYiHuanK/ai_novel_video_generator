@@ -4,7 +4,7 @@ from sqlmodel import Session
 
 from db.database import get_session
 from models.chat import ChatMessage, MessageRole, SendMessageRequest
-from services import chat_service
+from services import chat_service, agent_service
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -37,6 +37,22 @@ async def send_message(
 @router.delete("/{project_id}/history", status_code=204)
 def clear_history(project_id: str, session: Session = Depends(get_session)):
     chat_service.clear_history(session, project_id)
+
+
+@router.post("/{project_id}/agent")
+async def agent_send(
+    project_id: str,
+    request: SendMessageRequest,
+    session: Session = Depends(get_session),
+):
+    return StreamingResponse(
+        agent_service.stream_agent(session, project_id, request),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.get("/{project_id}/export")

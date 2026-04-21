@@ -31,6 +31,8 @@ export function ModelFormModal({ editing, onClose, onSaved }: Props) {
     is_enabled: editing?.is_enabled ?? true,
     max_tokens: editing?.max_tokens ?? 4096,
     temperature: editing?.temperature ?? 0.7,
+    enable_thinking: editing?.enable_thinking ?? false,
+    thinking_budget: editing?.thinking_budget ?? null as number | null,
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -127,6 +129,20 @@ export function ModelFormModal({ editing, onClose, onSaved }: Props) {
               <label className="label">Temperature</label>
               <input className="input" type="number" step="0.1" min="0" max="2" value={form.temperature} onChange={e => setForm(f => ({ ...f, temperature: Number(e.target.value) }))} />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+              <input type="checkbox" checked={form.enable_thinking} onChange={e => setForm(f => ({ ...f, enable_thinking: e.target.checked, thinking_budget: e.target.checked ? (f.thinking_budget ?? 4096) : null }))} />
+              启用 Thinking（推理模型）
+            </label>
+            {form.enable_thinking && (
+              <div>
+                <label className="label">Thinking 预算（token）</label>
+                <input className="input" type="number" value={form.thinking_budget ?? ''} onChange={e => setForm(f => ({ ...f, thinking_budget: e.target.value ? Number(e.target.value) : null }))} placeholder="4096" />
+                <p className="text-xs text-gray-400 mt-1">限制模型思考过程的 token 数量，防止死循环。建议 4096。</p>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-4">

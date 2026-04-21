@@ -1,5 +1,5 @@
 import client from './client'
-import type { ChapterContent, ChapterCreate, ChapterRead, ExportFormat } from '../types/novel'
+import type { ChapterContent, ChapterCreate, ChapterRead, ExportFormat, NarrativeState, OutlineVersion } from '../types/novel'
 import { projectsApi } from './projectsApi'
 
 export const novelApi = {
@@ -28,4 +28,14 @@ export const novelApi = {
     client.get<{ content: string }>(`/novel/${projectId}/outline`).then(r => r.data.content),
   saveOutline: (projectId: string, content: string) =>
     client.put(`/novel/${projectId}/outline`, { content }),
+  summarizeChapter: (projectId: string, chapterId: string) =>
+    client.post<NarrativeState>(`/novel/${projectId}/chapters/${chapterId}/summarize`).then(r => r.data),
+  getNarrativeContext: (projectId: string, chapterId: string) =>
+    client.get<{ context: string }>(`/novel/${projectId}/chapters/${chapterId}/narrative-context`).then(r => r.data.context),
+  listOutlineVersions: (projectId: string) =>
+    client.get<OutlineVersion[]>(`/novel/${projectId}/outline/versions`).then(r => r.data),
+  saveOutlineVersion: (projectId: string, content: string, source: 'auto' | 'manual' = 'auto') =>
+    client.post<OutlineVersion>(`/novel/${projectId}/outline/versions`, { content, source }).then(r => r.data),
+  deleteOutlineVersion: (projectId: string, versionId: string) =>
+    client.delete(`/novel/${projectId}/outline/versions/${versionId}`),
 }

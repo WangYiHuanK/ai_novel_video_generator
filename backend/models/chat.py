@@ -26,6 +26,6 @@ class SendMessageRequest(BaseModel):
 
 
 class StreamEvent(BaseModel):
-    event: Literal["delta", "done", "error"]
+    event: Literal["delta", "done", "error", "thinking", "tool_use", "tool_result"]
     data: str
     message_id: str | None = None

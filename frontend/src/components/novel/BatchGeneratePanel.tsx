@@ -1,10 +1,11 @@
 /**
- * Batch generate all chapters with progress display
+ * Batch generate all chapters with progress display.
+ * State lives in useBatchStore so navigation doesn't interrupt generation.
  */
-import { useRef, useState } from 'react'
+import { useEffect } from 'react'
 import { Zap, Square, CheckCircle, XCircle, Loader2, Play } from 'lucide-react'
-import { aiGenerateApi, type BatchEvent } from '../../api/aiGenerateApi'
 import { clsx } from 'clsx'
+import { useBatchStore } from '../../store/useBatchStore'
 
 interface BatchGeneratePanelProps {
   projectId: string
@@ -12,95 +13,32 @@ interface BatchGeneratePanelProps {
   onChapterDone?: () => void
 }
 
-interface ChapterStatus {
-  id: string
-  title: string
-  status: 'pending' | 'generating' | 'continuing' | 'done' | 'error'
-  words?: number
-  message?: string
-}
-
 export function BatchGeneratePanel({ projectId, totalChapters, onChapterDone }: BatchGeneratePanelProps) {
-  const [running, setRunning] = useState(false)
-  const [log, setLog] = useState<string>('')
-  const [chapterStatuses, setChapterStatuses] = useState<ChapterStatus[]>([])
-  const [doneCount, setDoneCount] = useState(0)
-  const stopRef = useRef<(() => void) | null>(null)
-  // Track how many chapters were done when stopped, to support resume
-  const doneCountRef = useRef(0)
+  const { running, log, chapterStatuses, doneCount, start, stop } = useBatchStore()
 
-  function updateChapter(id: string, update: Partial<ChapterStatus>) {
-    setChapterStatuses(prev => {
-      const idx = prev.findIndex(c => c.id === id)
-      if (idx === -1) return prev
-      const next = [...prev]
-      next[idx] = { ...next[idx], ...update }
-      return next
-    })
-  }
-
-  function startFrom(skipDone: number) {
-    setRunning(true)
-    setLog('')
-
-    const stop = aiGenerateApi.batchGenerate(
-      projectId,
-      { min_words: 3000, skip_done: skipDone },
-      (event: BatchEvent) => {
-        setLog(event.message)
-
-        if (event.event === 'chapter_start' && event.chapter_id) {
-          setChapterStatuses(prev => {
-            const exists = prev.find(c => c.id === event.chapter_id)
-            if (exists) return prev.map(c => c.id === event.chapter_id ? { ...c, status: 'generating', message: event.message } : c)
-            return [...prev, { id: event.chapter_id!, title: event.title || '', status: 'generating', message: event.message }]
-          })
-        } else if (event.event === 'chapter_progress' && event.chapter_id) {
-          updateChapter(event.chapter_id, { words: event.words, message: event.message })
-        } else if (event.event === 'chapter_continue' && event.chapter_id) {
-          updateChapter(event.chapter_id, { status: 'continuing', words: event.words, message: event.message })
-        } else if (event.event === 'chapter_done' && event.chapter_id) {
-          updateChapter(event.chapter_id, { status: 'done', words: event.words, message: event.message })
-          setDoneCount(n => { doneCountRef.current = n + 1; return n + 1 })
-          onChapterDone?.()
-        } else if (event.event === 'chapter_error' && event.chapter_id) {
-          updateChapter(event.chapter_id, { status: 'error', message: event.message })
-        }
-      },
-      () => { setRunning(false); stopRef.current = null },
-      (err) => { setLog(`错误: ${err.message}`); setRunning(false) }
-    )
-
-    stopRef.current = stop
-  }
+  useEffect(() => {
+    useBatchStore.getState().setOnChapterDone(onChapterDone ?? null)
+    return () => useBatchStore.getState().setOnChapterDone(null)
+  }, [onChapterDone])
 
   function handleStart() {
     if (totalChapters === 0) return
-    doneCountRef.current = 0
-    setDoneCount(0)
-    setChapterStatuses([])
-    startFrom(0)
+    start(projectId, totalChapters, 0)
   }
 
   function handleResume() {
-    startFrom(doneCountRef.current)
+    const skip = useBatchStore.getState().doneCount
+    start(projectId, totalChapters, skip)
   }
 
-  function handleStop() {
-    stopRef.current?.()
-    stopRef.current = null
-    setRunning(false)
-    setLog('已暂停，可点击继续')
-  }
-
-  const canResume = !running && doneCountRef.current > 0 && doneCountRef.current < totalChapters
+  const canResume = !running && doneCount > 0 && doneCount < totalChapters
 
   return (
     <div className="border-t border-gray-200 bg-white px-4 py-3">
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
           {running ? (
-            <button onClick={handleStop} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-600 text-white rounded-md hover:bg-red-700">
+            <button onClick={stop} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-600 text-white rounded-md hover:bg-red-700">
               <Square size={13} fill="currentColor" /> 暂停
             </button>
           ) : (

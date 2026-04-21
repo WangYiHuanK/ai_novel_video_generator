@@ -27,6 +27,8 @@ class ModelConfigBase(BaseModel):
     is_enabled: bool = True
     max_tokens: int = 4096
     temperature: float = 0.7
+    enable_thinking: bool = False
+    thinking_budget: int | None = None
 
 
 class ModelConfigCreate(ModelConfigBase):

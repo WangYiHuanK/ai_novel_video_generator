@@ -16,7 +16,7 @@ export interface SendMessageRequest {
 }
 
 export interface StreamEvent {
-  event: 'delta' | 'done' | 'error'
+  event: 'delta' | 'done' | 'error' | 'thinking' | 'tool_use' | 'tool_result'
   data: string
   message_id?: string
 }

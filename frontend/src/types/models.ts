@@ -12,6 +12,8 @@ export interface ModelConfig {
   is_enabled: boolean
   max_tokens: number
   temperature: number
+  enable_thinking: boolean
+  thinking_budget: number | null
   api_key_masked: string
   created_at: string
   updated_at: string
@@ -27,6 +29,8 @@ export interface ModelConfigCreate {
   is_enabled: boolean
   max_tokens: number
   temperature: number
+  enable_thinking: boolean
+  thinking_budget: number | null
   api_key: string
 }
 

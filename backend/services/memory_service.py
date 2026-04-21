@@ -48,19 +48,24 @@ class NovelMemoryManager:
         if not prev_chapters:
             return "这是第一章，没有前文。"
 
-        context_parts = ["前文回顾：\n"]
+        context_parts = ["前文回顾："]
         for ch in prev_chapters:
-            full_ch = get_chapter(self.project_id, ch.id)
-            if full_ch:
-                context_parts.append(f"## 第{ch.order}章：{ch.title}")
-                if ch.summary:
-                    context_parts.append(f"概述：{ch.summary}")
-                # Include first 500 chars of content for context
-                content_preview = full_ch.content[:500]
-                if len(full_ch.content) > 500:
-                    content_preview += "..."
-                context_parts.append(content_preview)
-                context_parts.append("")
+            is_prev = (ch.order == current_order - 1)
+            if ch.summary:
+                context_parts.append(f"第{ch.order}章 {ch.title}：{ch.summary}")
+            else:
+                full_ch = get_chapter(self.project_id, ch.id)
+                if full_ch and full_ch.content:
+                    preview = full_ch.content[:200].rsplit("。", 1)[0] + "。" if "。" in full_ch.content[:200] else full_ch.content[:150] + "…"
+                    context_parts.append(f"第{ch.order}章 {ch.title}：{preview}")
+                else:
+                    context_parts.append(f"第{ch.order}章 {ch.title}")
+
+            if is_prev:
+                full_ch = get_chapter(self.project_id, ch.id)
+                if full_ch and full_ch.content:
+                    tail = full_ch.content[-500:]
+                    context_parts.append(f"（上一章结尾）\n{tail}")
 
         return "\n".join(context_parts)
 

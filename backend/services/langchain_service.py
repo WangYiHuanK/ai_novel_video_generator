@@ -1,4 +1,5 @@
 """LangChain chains for novel generation."""
+import re
 from typing import Optional
 
 from langchain.chains import LLMChain
@@ -6,6 +7,18 @@ from langchain_core.prompts import PromptTemplate
 
 from services.langchain_llm import CustomLLM
 from services.memory_service import NovelMemoryManager, OutlineMemoryManager
+
+_SUMMARY_RE = re.compile(r"【章节概括】\s*(.+)", re.DOTALL)
+
+
+def parse_content_and_summary(text: str) -> tuple[str, str]:
+    """Split model output into (content, summary). Returns empty summary if marker not found."""
+    m = _SUMMARY_RE.search(text)
+    if m:
+        content = text[:m.start()].rstrip()
+        summary = m.group(1).strip().split("\n")[0].strip()
+        return content, summary
+    return text.strip(), ""
 
 
 class OutlineGenerationChain:
@@ -110,7 +123,9 @@ class ChapterGenerationChain:
 4. 适当的细节描写和对话
 5. 章节长度建议 2000-4000 字
 
-请直接输出章节内容，不要包含章节标题（标题会自动添加）。"""
+输出格式要求：
+1. 先输出小说正文（不含章节标题、不含"第X章 完"等结束标记）
+2. 正文结束后，另起一行输出"【章节概括】"，后面跟一句话概括本章核心情节（100字以内）"""
         )
 
         self.chain = LLMChain(
@@ -168,7 +183,10 @@ class ChapterGenerationChain:
 用户要求：
 {user_request}
 
-请直接继续写作，保持风格和情节的连贯性。"""
+直接衔接上文继续写作，保持风格和情节的连贯性。
+输出格式要求：
+1. 先输出续写的正文（不含"第X章 完"等结束标记）
+2. 正文结束后，另起一行输出"【章节概括】"，后面用一句话概括本章到目前为止的完整情节（100字以内）"""
 
         result = await self.llm._acall(continuation_prompt)
         return result
