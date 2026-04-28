@@ -17,7 +17,7 @@ env/
 backend/data/
 
 # Project files (user content)
-projects/
+/projects/
 
 # Node
 node_modules/
