@@ -2,7 +2,7 @@
 import re
 from typing import Optional
 
-from langchain.chains import LLMChain
+from langchain_classic.chains import LLMChain
 from langchain_core.prompts import PromptTemplate
 
 from services.langchain_llm import CustomLLM

@@ -2,7 +2,7 @@
 from pathlib import Path
 from typing import List, Optional
 
-from langchain.memory import ConversationBufferMemory
+from langchain_classic.memory import ConversationBufferMemory
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from config import PROJECTS_BASE_DIR
